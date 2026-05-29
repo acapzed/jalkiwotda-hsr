@@ -1,0 +1,148 @@
+(() => {
+  const app = window.JALKIWOTDA_HSR;
+  if (!app) return;
+
+  Object.assign(app.styles, {
+    table: "width:max-content;min-width:100%;border-collapse:collapse;",
+    tableCell: "border-bottom:1px solid #2b3442;padding:6px;text-align:left;vertical-align:top;",
+    modal: [
+      "position:fixed", "inset:40px", "z-index:2147483646", "overflow:auto", "padding:16px",
+      "border:1px solid #5f6b7a", "border-radius:8px", "background:#10141d", "color:#fff",
+      "font:12px/1.45 sans-serif", "box-shadow:0 8px 30px rgba(0,0,0,.55)",
+    ].join(";"),
+    panel: [
+      "position:fixed", "right:12px", "bottom:12px", "z-index:2147483647", "display:flex",
+      "flex-direction:column", "gap:8px", "align-items:stretch", "width:188px", "padding:8px",
+      "border:1px solid #5f6b7a", "border-radius:8px", "background:#151922", "color:#fff",
+      "font:12px/1.2 sans-serif", "box-shadow:0 4px 16px rgba(0,0,0,.35)",
+    ].join(";"),
+    panelButton: [
+      "border:1px solid #8892a0", "border-radius:4px", "background:#242b36", "color:#fff",
+      "width:100%", "padding:4px 6px", "font:12px/1 sans-serif", "cursor:pointer",
+    ].join(";"),
+    panelImage: [
+      "width:100%", "aspect-ratio:1/1", "object-fit:cover", "border-radius:6px", "background:#242b36", "display:block",
+    ].join(";"),
+    panelCount: "display:flex;justify-content:space-between;align-items:center;gap:8px;",
+    panelButtonRow: "display:flex;",
+    reportIcon: "width:24px;height:24px;object-fit:contain;vertical-align:middle;margin-right:8px;",
+    statIcon: "width:16px;height:16px;object-fit:contain;vertical-align:-3px;margin-right:4px;",
+    inlineStatIcon: "width:16px;height:16px;object-fit:contain;vertical-align:-3px;margin-right:3px;",
+    itemIcon: "width:30px;height:30px;object-fit:contain;vertical-align:middle;margin-right:5px;border-radius:4px;background:#242b36;",
+    equipmentIcon: "width:60px;height:60px;object-fit:contain;vertical-align:middle;margin-right:5px;border-radius:4px;background:#242b36;",
+    characterIcon: "width:60px;height:60px;object-fit:cover;vertical-align:middle;margin-right:6px;border-radius:4px;background:#242b36;",
+  });
+
+  function addUnique(list, value) {
+    if (value && !list.includes(value)) list.push(value);
+  }
+
+  function getUrl(input) {
+    if (typeof input === "string") return input;
+    if (input && typeof input.url === "string") return input.url;
+    return "";
+  }
+
+  function isLikelyImageUrl(value) {
+    return /^(?:https?:)?\/\//i.test(value) &&
+      (/\.(?:png|webp|jpg|jpeg)(?:\?|$)/i.test(value) ||
+        value.includes("act-webstatic.hoyoverse.com") ||
+        value.includes("act-upload.hoyoverse.com"));
+  }
+
+  function normalizeImageUrl(value) {
+    return value.startsWith("//") ? `${window.location.protocol}${value}` : value;
+  }
+
+  function getImageUrl(source, depth = 0, seen = new Set()) {
+    if (!source || depth > 3) return "";
+    if (typeof source === "string") return isLikelyImageUrl(source) ? normalizeImageUrl(source) : "";
+    if (typeof source !== "object" || seen.has(source)) return "";
+    seen.add(source);
+
+    const preferredKeys = [
+      "icon", "icon_url", "iconUrl", "image", "image_url", "imageUrl", "item_icon", "itemIcon",
+      "avatar_icon", "avatarIcon", "portrait", "portrait_url", "portraitUrl", "head_icon", "headIcon",
+    ];
+
+    for (const key of preferredKeys) {
+      const url = getImageUrl(source[key], depth + 1, seen);
+      if (url) return url;
+    }
+
+    for (const [key, value] of Object.entries(source)) {
+      if (!/(?:icon|image|avatar|portrait|head|figure|thumb|url)/i.test(key)) continue;
+      const url = getImageUrl(value, depth + 1, seen);
+      if (url) return url;
+    }
+
+    return "";
+  }
+
+  function isTarget(url) {
+    return app.constants.targets.some((target) => url.includes(target));
+  }
+
+  function parseJson(text) {
+    try { return JSON.parse(text); } catch { return null; }
+  }
+
+  function cleanCell(value) {
+    return String(value || "").replace(/\u00a0/g, " ").trim();
+  }
+
+  function splitLines(value) {
+    return cleanCell(value).split(/\n+/).map((line) => line.trim()).filter(Boolean);
+  }
+
+  function normalizeName(value) {
+    return String(value || "")
+      .replace(/\u00a0/g, " ")
+      .replace(/\s+/g, "")
+      .replace(/[·.•.]/g, "")
+      .trim();
+  }
+
+  function normalizeCompareText(value) {
+    return cleanCell(value)
+      .toLowerCase()
+      .replace(/\([^)]*\)/g, "")
+      .replace(/치확/g, "치명타확률")
+      .replace(/치피/g, "치명타피해")
+      .replace(/효명/g, "효과명중")
+      .replace(/효저/g, "효과저항")
+      .replace(/격특/g, "격파특수효과")
+      .replace(/에충/g, "에너지회복효율")
+      .replace(/충전/g, "회복")
+      .replace(/증가|보너스|속성/g, "")
+      .replace(/[,\s·.•.~/+_-]/g, "")
+      .trim();
+  }
+
+  function escapeHtml(value) {
+    return String(value ?? "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;");
+  }
+
+  function parseNumber(value) {
+    const match = String(value || "").replace(/,/g, "").match(/-?\d+(?:\.\d+)?/);
+    return match ? Number(match[0]) : null;
+  }
+
+  Object.assign(app.utils, {
+    addUnique,
+    getUrl,
+    getImageUrl,
+    isTarget,
+    parseJson,
+    cleanCell,
+    splitLines,
+    normalizeName,
+    normalizeCompareText,
+    escapeHtml,
+    parseNumber,
+  });
+})();

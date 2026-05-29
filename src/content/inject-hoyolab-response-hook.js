@@ -1,45 +1,60 @@
 (() => {
   const SHEET_CSV_URL =
     "https://docs.google.com/spreadsheets/d/1kRQjQrHsgIDqPdnyDCVXG59Ge8AaKm0dyJvj6Vp2AY4/export?format=csv&gid=0";
-  const script = document.createElement("script");
-  script.src = chrome.runtime.getURL("src/injected/hoyolab-response-hook.js");
-  script.dataset.sheetUrl = SHEET_CSV_URL;
-  script.dataset.reportImageUrl = chrome.runtime.getURL("src/assets/report-button.webp");
-  script.dataset.statIconUrl = chrome.runtime.getURL("src/assets/icon-32.png");
-  script.dataset.hpIconUrl = chrome.runtime.getURL("src/assets/hp-icon.webp");
-  script.dataset.atkIconUrl = chrome.runtime.getURL("src/assets/atk-icon.webp");
-  script.dataset.defIconUrl = chrome.runtime.getURL("src/assets/def-icon.webp");
-  script.dataset.spdIconUrl = chrome.runtime.getURL("src/assets/spd-icon.webp");
-  script.dataset.critRateIconUrl = chrome.runtime.getURL("src/assets/crit-rate-icon.webp");
-  script.dataset.critDmgIconUrl = chrome.runtime.getURL("src/assets/crit-dmg-icon.webp");
-  script.dataset.breakIconUrl = chrome.runtime.getURL("src/assets/break-icon.webp");
-  script.dataset.ehrIconUrl = chrome.runtime.getURL("src/assets/ehr-icon.webp");
-  script.dataset.errIconUrl = chrome.runtime.getURL("src/assets/err-icon.webp");
-  script.dataset.healIconUrl = chrome.runtime.getURL("src/assets/heal-icon.webp");
-  script.onload = () => script.remove();
-  (document.head || document.documentElement).appendChild(script);
 
-  window.addEventListener("message", (event) => {
-    if (event.source !== window) {
+  const INJECTED_FILES = [
+    "src/injected/00-bootstrap.js",
+    "src/injected/01-utils.js",
+    "src/injected/02-sheet.js",
+    "src/injected/03-wiki.js",
+    "src/injected/04-compare.js",
+    "src/injected/05-render.js",
+    "src/injected/06-network.js",
+    "src/injected/07-panel.js",
+    "src/injected/08-main.js",
+  ];
+
+  function attachDataset(script) {
+    script.dataset.sheetUrl = SHEET_CSV_URL;
+    script.dataset.reportImageUrl = chrome.runtime.getURL("src/assets/report-button.webp");
+    script.dataset.statIconUrl = chrome.runtime.getURL("src/assets/icon-32.png");
+    script.dataset.hpIconUrl = chrome.runtime.getURL("src/assets/hp-icon.webp");
+    script.dataset.atkIconUrl = chrome.runtime.getURL("src/assets/atk-icon.webp");
+    script.dataset.defIconUrl = chrome.runtime.getURL("src/assets/def-icon.webp");
+    script.dataset.spdIconUrl = chrome.runtime.getURL("src/assets/spd-icon.webp");
+    script.dataset.critRateIconUrl = chrome.runtime.getURL("src/assets/crit-rate-icon.webp");
+    script.dataset.critDmgIconUrl = chrome.runtime.getURL("src/assets/crit-dmg-icon.webp");
+    script.dataset.breakIconUrl = chrome.runtime.getURL("src/assets/break-icon.webp");
+    script.dataset.ehrIconUrl = chrome.runtime.getURL("src/assets/ehr-icon.webp");
+    script.dataset.errIconUrl = chrome.runtime.getURL("src/assets/err-icon.webp");
+    script.dataset.healIconUrl = chrome.runtime.getURL("src/assets/heal-icon.webp");
+  }
+
+  function injectSequentially(files, index = 0) {
+    if (index >= files.length) {
       return;
     }
 
-    if (event.data?.type !== "JALKIWOTDA_HSR_RESPONSE") {
-      return;
+    const script = document.createElement("script");
+    script.src = chrome.runtime.getURL(files[index]);
+
+    if (index === 0) {
+      attachDataset(script);
     }
 
-    chrome.runtime
-      .sendMessage({
-        type: "JALKIWOTDA_HSR_RESPONSE",
-        payload: event.data.payload,
-      })
-      .catch(() => {
-        // The debug panel still works even when no background listener exists.
-      });
-  });
+    script.onload = () => {
+      script.remove();
+      injectSequentially(files, index + 1);
+    };
+    script.onerror = () => script.remove();
+
+    (document.head || document.documentElement).appendChild(script);
+  }
+
+  injectSequentially(INJECTED_FILES);
 
   window.addEventListener("message", async (event) => {
-    if (event.source !== window) {
+    if (event.source !== window || event.origin !== window.location.origin) {
       return;
     }
 
