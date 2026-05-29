@@ -73,6 +73,25 @@ function parseMainStats(row) {
   return mainStats;
 }
 
+function fillMergedSheetCells(rows) {
+  const fillColumns = [4, 5, 6, 7, 8, 9, 10, 13, 14];
+  const previous = [];
+
+  return rows.map((row) => {
+    const next = [...row];
+
+    for (const column of fillColumns) {
+      if (cleanCell(next[column])) {
+        previous[column] = next[column];
+      } else if (cleanCell(previous[column])) {
+        next[column] = previous[column];
+      }
+    }
+
+    return next;
+  });
+}
+
 function parseSheetRows(rows) {
   const headerIndex = rows.findIndex((row) => cleanCell(row[0]) === "캐릭명");
 
@@ -91,7 +110,7 @@ function parseSheetRows(rows) {
       continue;
     }
 
-    const variants = blockRows
+    const variants = fillMergedSheetCells(blockRows)
       .filter((blockRow) => blockRow.some((cell, index) => index > 0 && cleanCell(cell)))
       .map((blockRow) => ({
         path: cleanCell(blockRow[1]),
@@ -131,6 +150,7 @@ if (require.main === module) {
 }
 
 module.exports = {
+  fillMergedSheetCells,
   loadSheet,
   parseCsv,
   parseSheetRows,

@@ -15,7 +15,7 @@
     "https://sg-act-public-api.hoyolab.com/hoyowiki/hsr/wapi/get_entry_page_list";
   const WIKI_RELIC_SET_MENU_ID = "108";
   const WIKI_PAGE_SIZE = 30;
-  const TABLE_STYLE = "width:100%;border-collapse:collapse;";
+  const TABLE_STYLE = "width:max-content;min-width:100%;border-collapse:collapse;";
   const TABLE_CELL_STYLE =
     "border-bottom:1px solid #2b3442;padding:6px;text-align:left;vertical-align:top;";
   const MODAL_STYLE = [
@@ -37,11 +37,13 @@
     "bottom:12px",
     "z-index:2147483647",
     "display:flex",
-    "gap:6px",
-    "align-items:center",
+    "flex-direction:column",
+    "gap:8px",
+    "align-items:stretch",
+    "width:188px",
     "padding:8px",
     "border:1px solid #5f6b7a",
-    "border-radius:6px",
+    "border-radius:8px",
     "background:#151922",
     "color:#fff",
     "font:12px/1.2 sans-serif",
@@ -52,9 +54,75 @@
     "border-radius:4px",
     "background:#242b36",
     "color:#fff",
+    "width:100%",
     "padding:4px 6px",
     "font:12px/1 sans-serif",
     "cursor:pointer",
+  ].join(";");
+  const PANEL_IMAGE_STYLE = [
+    "width:100%",
+    "aspect-ratio:1/1",
+    "object-fit:cover",
+    "border-radius:6px",
+    "background:#242b36",
+    "display:block",
+  ].join(";");
+  const PANEL_COUNT_STYLE = [
+    "display:flex",
+    "justify-content:space-between",
+    "align-items:center",
+    "gap:8px",
+  ].join(";");
+  const PANEL_BUTTON_ROW_STYLE = [
+    "display:flex",
+  ].join(";");
+  const REPORT_ICON_STYLE = [
+    "width:24px",
+    "height:24px",
+    "object-fit:contain",
+    "vertical-align:middle",
+    "margin-right:8px",
+  ].join(";");
+  const STAT_ICON_STYLE = [
+    "width:16px",
+    "height:16px",
+    "object-fit:contain",
+    "vertical-align:-3px",
+    "margin-right:4px",
+  ].join(";");
+  const INLINE_STAT_ICON_STYLE = [
+    "width:16px",
+    "height:16px",
+    "object-fit:contain",
+    "vertical-align:-3px",
+    "margin-right:3px",
+  ].join(";");
+  const ITEM_ICON_STYLE = [
+    "width:30px",
+    "height:30px",
+    "object-fit:contain",
+    "vertical-align:middle",
+    "margin-right:5px",
+    "border-radius:4px",
+    "background:#242b36",
+  ].join(";");
+  const EQUIPMENT_ICON_STYLE = [
+    "width:60px",
+    "height:60px",
+    "object-fit:contain",
+    "vertical-align:middle",
+    "margin-right:5px",
+    "border-radius:4px",
+    "background:#242b36",
+  ].join(";");
+  const CHARACTER_ICON_STYLE = [
+    "width:60px",
+    "height:60px",
+    "object-fit:cover",
+    "vertical-align:middle",
+    "margin-right:6px",
+    "border-radius:4px",
+    "background:#242b36",
   ].join(";");
   const CHECK_WEIGHTS = {
     lightCone: 2,
@@ -67,6 +135,18 @@
   };
 
   const SHEET_URL = document.currentScript?.dataset?.sheetUrl || "";
+  const REPORT_IMAGE_URL = document.currentScript?.dataset?.reportImageUrl || "";
+  const STAT_ICON_URL = document.currentScript?.dataset?.statIconUrl || "";
+  const HP_ICON_URL = document.currentScript?.dataset?.hpIconUrl || "";
+  const ATK_ICON_URL = document.currentScript?.dataset?.atkIconUrl || "";
+  const DEF_ICON_URL = document.currentScript?.dataset?.defIconUrl || "";
+  const SPD_ICON_URL = document.currentScript?.dataset?.spdIconUrl || "";
+  const CRIT_RATE_ICON_URL = document.currentScript?.dataset?.critRateIconUrl || "";
+  const CRIT_DMG_ICON_URL = document.currentScript?.dataset?.critDmgIconUrl || "";
+  const BREAK_ICON_URL = document.currentScript?.dataset?.breakIconUrl || "";
+  const EHR_ICON_URL = document.currentScript?.dataset?.ehrIconUrl || "";
+  const ERR_ICON_URL = document.currentScript?.dataset?.errIconUrl || "";
+  const HEAL_ICON_URL = document.currentScript?.dataset?.healIconUrl || "";
 
   // Local aliases are only sheet shorthand. Real equipment set names come from HoYoWiki.
   const ALIASES = new Map([
@@ -158,6 +238,7 @@
   ]);
   let sheetCharactersCache = null;
   let wikiEquipmentSetsCache = null;
+  let languageWarningShown = false;
 
   // Shared low-level helpers.
   function addUnique(list, value) {
@@ -173,6 +254,76 @@
 
     if (input && typeof input.url === "string") {
       return input.url;
+    }
+
+    return "";
+  }
+
+  function isLikelyImageUrl(value) {
+    return /^(?:https?:)?\/\//i.test(value) &&
+      (
+        /\.(?:png|webp|jpg|jpeg)(?:\?|$)/i.test(value) ||
+        value.includes("act-webstatic.hoyoverse.com") ||
+        value.includes("act-upload.hoyoverse.com")
+      );
+  }
+
+  function normalizeImageUrl(value) {
+    return value.startsWith("//") ? `${window.location.protocol}${value}` : value;
+  }
+
+  function getImageUrl(source, depth = 0, seen = new Set()) {
+    if (!source || depth > 3) {
+      return "";
+    }
+
+    if (typeof source === "string") {
+      return isLikelyImageUrl(source) ? normalizeImageUrl(source) : "";
+    }
+
+    if (typeof source !== "object" || seen.has(source)) {
+      return "";
+    }
+
+    seen.add(source);
+
+    const preferredKeys = [
+      "icon",
+      "icon_url",
+      "iconUrl",
+      "image",
+      "image_url",
+      "imageUrl",
+      "item_icon",
+      "itemIcon",
+      "avatar_icon",
+      "avatarIcon",
+      "portrait",
+      "portrait_url",
+      "portraitUrl",
+      "head_icon",
+      "headIcon",
+    ];
+
+    for (const key of preferredKeys) {
+      const value = source[key];
+      const url = getImageUrl(value, depth + 1, seen);
+
+      if (url) {
+        return url;
+      }
+    }
+
+    for (const [key, value] of Object.entries(source)) {
+      if (!/(?:icon|image|avatar|portrait|head|figure|thumb|url)/i.test(key)) {
+        continue;
+      }
+
+      const url = getImageUrl(value, depth + 1, seen);
+
+      if (url) {
+        return url;
+      }
     }
 
     return "";
@@ -262,6 +413,25 @@
     return mainStats;
   }
 
+  function fillMergedSheetCells(rows) {
+    const fillColumns = [4, 5, 6, 7, 8, 9, 10, 13, 14];
+    const previous = [];
+
+    return rows.map((row) => {
+      const next = [...row];
+
+      for (const column of fillColumns) {
+        if (cleanCell(next[column])) {
+          previous[column] = next[column];
+        } else if (cleanCell(previous[column])) {
+          next[column] = previous[column];
+        }
+      }
+
+      return next;
+    });
+  }
+
   function parseSheetRows(rows) {
     const headerIndex = rows.findIndex((row) => cleanCell(row[0]) === "캐릭명");
 
@@ -280,7 +450,7 @@
         continue;
       }
 
-      const variants = blockRows
+      const variants = fillMergedSheetCells(blockRows)
         .filter((blockRow) => blockRow.some((cell, index) => index > 0 && cleanCell(cell)))
         .map((blockRow) => ({
           path: cleanCell(blockRow[1]),
@@ -604,17 +774,22 @@
 
       const group = groups.get(key) || {
         key,
-        label: setInfo?.label || dataAlias || `Unmapped ${key}`,
+        label: setInfo?.label || dataAlias || `미매핑 ${key}`,
         aliases,
         dataAliases: setInfo ? [] : (dataAlias ? [dataAlias] : []),
         known: Boolean(setInfo),
         wikiEntryId,
         wikiUrl: relicWiki?.[item?.id] || "",
         itemKey,
+        iconUrl: getImageUrl(item),
         count: 0,
       };
 
       addUnique(group.aliases, dataAlias);
+
+      if (!group.iconUrl) {
+        group.iconUrl = getImageUrl(item);
+      }
 
       if (!setInfo && dataAlias && !group.dataAliases.includes(dataAlias)) {
         group.dataAliases.push(dataAlias);
@@ -670,6 +845,16 @@
       : "-";
   }
 
+  function formatSetGroupsHtml(groups) {
+    return groups.length
+      ? groups
+          .map((group) =>
+            `${renderInlineIcon(group.iconUrl, ITEM_ICON_STYLE)}${escapeHtml(group.label)} x${escapeHtml(group.count)}`,
+          )
+          .join("<br>")
+      : "-";
+  }
+
   function getBuildData(character, propertyInfo, relicWiki, wikiSetNames) {
     const relics = character.relics || [];
     const ornaments = character.ornaments || [];
@@ -685,6 +870,7 @@
 
     return {
       lightCone: cleanCell(character.equip?.name || ""),
+      lightConeIcon: getImageUrl(character.equip),
       relicSets: summarizeSets(relics, relicWiki, wikiSetNames),
       ornamentSets: summarizeSets(ornaments, relicWiki, wikiSetNames),
       mainStats,
@@ -834,6 +1020,10 @@
       const target = parseNumber(line);
 
       if (!propertyName || target === null) {
+        if (checks.length > 0) {
+          const previous = checks[checks.length - 1];
+          previous.notes = [...(previous.notes || []), line];
+        }
         continue;
       }
 
@@ -910,6 +1100,22 @@
     return { status: summarizeCheckStatus(checks), checks };
   }
 
+  function applySelectedVariant(row, variantIndex) {
+    const fallbackComparison = row.comparisons?.find(Boolean) || row.comparison || null;
+    const comparison = row.comparisons?.[variantIndex] || fallbackComparison;
+    const variant = comparison?.variant ||
+      row.variants?.[variantIndex] ||
+      row.variants?.find((candidate) => cleanCell(candidate.role)) ||
+      row.variants?.[0] ||
+      {};
+
+    row.selectedVariantIndex = Math.max(0, variantIndex);
+    row.comparison = comparison;
+    row.statComparison = compareStatTarget(row.properties, variant.statTarget || "");
+    row.critComparison = compareCritTarget(row.properties, variant.critTarget || "");
+    return row;
+  }
+
   function buildReportRows(detailData, sheetCharacters, wikiSetNames = new Map()) {
     const propertyInfo = detailData.property_info || {};
     const relicWiki = detailData.relic_wiki || {};
@@ -917,7 +1123,7 @@
       sheetCharacters.map((character) => [normalizeName(character.name), character]),
     );
 
-    return (detailData.avatar_list || []).map((character) => {
+    return (detailData.avatar_list || []).map((character, rowIndex) => {
       const sheetName = resolveSheetName(character, sheetByNormalizedName);
       const sheet = sheetName ? sheetByNormalizedName.get(normalizeName(sheetName)) : null;
       const properties = Object.fromEntries(
@@ -927,25 +1133,28 @@
         ]),
       );
       const build = getBuildData(character, propertyInfo, relicWiki, wikiSetNames);
-      const comparison = pickBestComparison(build, sheet?.variants || []);
-      const selectedVariant = comparison?.variant || sheet?.variants?.[0] || {};
-      const statComparison = compareStatTarget(properties, selectedVariant.statTarget || "");
-      const critComparison = compareCritTarget(properties, selectedVariant.critTarget || "");
+      const variants = (sheet?.variants || []).filter((variant) => cleanCell(variant.role));
+      const comparisons = variants.map((variant) => compareVariant(build, variant));
+      const comparison = pickBestComparison(build, variants);
+      const selectedVariantIndex = Math.max(
+        0,
+        comparisons.findIndex((candidate) => candidate?.variant === comparison?.variant),
+      );
 
-      return {
+      return applySelectedVariant({
         id: character.id,
+        rowIndex,
         name: cleanCell(character.name),
+        iconUrl: getImageUrl(character),
         level: character.level,
         rank: character.rank,
         sheetName,
         matched: Boolean(sheet),
         properties,
         build,
-        comparison,
-        statComparison,
-        critComparison,
-        variants: sheet?.variants || [],
-      };
+        comparisons,
+        variants,
+      }, selectedVariantIndex);
     });
   }
 
@@ -982,17 +1191,75 @@
     return sets;
   }
 
-  function getDisplayStats(properties) {
-    return [
-      properties.HP,
-      properties.공격력,
-      properties.방어력,
-      properties.속도,
-      properties["치명타 확률"],
-      properties["치명타 피해"],
-    ]
-      .filter(Boolean)
-      .join(" / ");
+  function renderInlineIcon(url, style = INLINE_STAT_ICON_STYLE) {
+    return url ? `<img src="${escapeHtml(url)}" alt="" style="${style}">` : "";
+  }
+
+  function renderDisplayStats(properties) {
+    const stats = [
+      { value: properties.HP, iconUrl: HP_ICON_URL },
+      { value: properties.공격력, iconUrl: ATK_ICON_URL },
+      { value: properties.방어력, iconUrl: DEF_ICON_URL },
+      { value: properties.속도, iconUrl: SPD_ICON_URL },
+      { value: properties["치명타 확률"], iconUrl: CRIT_RATE_ICON_URL },
+      { value: properties["치명타 피해"], iconUrl: CRIT_DMG_ICON_URL },
+      { value: properties["격파 특수효과"], iconUrl: BREAK_ICON_URL },
+      { value: properties["효과 명중"], iconUrl: EHR_ICON_URL },
+      { value: properties["에너지 회복효율"], iconUrl: ERR_ICON_URL },
+      { value: properties["치유량 보너스"], iconUrl: HEAL_ICON_URL },
+    ].filter((stat) => stat.value);
+
+    return stats
+      .map((stat) =>
+        `<span style="white-space:nowrap;">${renderInlineIcon(stat.iconUrl)}${escapeHtml(stat.value)}</span>`,
+      )
+      .join("<br>");
+  }
+
+  function getPropertyIconUrl(propertyName) {
+    const normalized = normalizeCompareText(propertyName);
+
+    if (normalized === "hp") {
+      return HP_ICON_URL;
+    }
+
+    if (normalized.includes("공격력")) {
+      return ATK_ICON_URL;
+    }
+
+    if (normalized.includes("방어력")) {
+      return DEF_ICON_URL;
+    }
+
+    if (normalized.includes("속도")) {
+      return SPD_ICON_URL;
+    }
+
+    if (normalized.includes("치명타확률")) {
+      return CRIT_RATE_ICON_URL;
+    }
+
+    if (normalized.includes("치명타피해")) {
+      return CRIT_DMG_ICON_URL;
+    }
+
+    if (normalized.includes("격파특수효과")) {
+      return BREAK_ICON_URL;
+    }
+
+    if (normalized.includes("효과명중")) {
+      return EHR_ICON_URL;
+    }
+
+    if (normalized.includes("에너지회복효율")) {
+      return ERR_ICON_URL;
+    }
+
+    if (normalized.includes("치유량")) {
+      return HEAL_ICON_URL;
+    }
+
+    return "";
   }
 
   function escapeHtml(value) {
@@ -1005,11 +1272,11 @@
 
   function getStatusLabel(status) {
     if (status === "ok") {
-      return "OK";
+      return "적합";
     }
 
     if (status === "bad") {
-      return "NG";
+      return "확인";
     }
 
     return "?";
@@ -1029,7 +1296,7 @@
 
   function renderBadge(check) {
     return [
-      `<span style="display:inline-block;min-width:22px;margin-right:4px;color:${getStatusColor(check?.status)};font-weight:700;">`,
+      `<span style="display:inline-block;min-width:34px;color:${getStatusColor(check?.status)};font-weight:700;flex:none;">`,
       getStatusLabel(check?.status),
       "</span>",
     ].join("");
@@ -1037,14 +1304,40 @@
 
   function renderExpectedText(values) {
     const value = (values || []).filter(Boolean).join(" / ");
-    return value ? ` <small style="color:#aab4c3;">(${escapeHtml(value)})</small>` : "";
+    return value
+      ? `<small style="display:block;margin-left:40px;color:#aab4c3;">(${escapeHtml(value)})</small>`
+      : "";
   }
 
-  function renderOptionLine(label, actual, check, expectedValues) {
+  function renderOptionLine(
+    label,
+    actual,
+    check,
+    expectedValues,
+    iconUrl = getPropertyIconUrl(actual),
+    iconStyle = INLINE_STAT_ICON_STYLE,
+  ) {
     return [
       "<div>",
+      '<div style="display:flex;align-items:center;gap:6px;">',
       renderBadge(check),
-      `${escapeHtml(label)}: ${escapeHtml(actual || "-")}`,
+      `<span style="display:inline-block;min-width:36px;flex:none;">${escapeHtml(label)}:</span>`,
+      renderInlineIcon(iconUrl, iconStyle),
+      `<span>${escapeHtml(actual || "-")}</span>`,
+      "</div>",
+      renderExpectedText(expectedValues),
+      "</div>",
+    ].join("");
+  }
+
+  function renderOptionHtmlLine(label, actualHtml, check, expectedValues) {
+    return [
+      "<div>",
+      '<div style="display:flex;align-items:flex-start;gap:6px;">',
+      renderBadge(check),
+      `<span style="display:inline-block;min-width:42px;flex:none;">${escapeHtml(label)}:</span>`,
+      `<span>${actualHtml || "-"}</span>`,
+      "</div>",
       renderExpectedText(expectedValues),
       "</div>",
     ].join("");
@@ -1052,13 +1345,19 @@
 
   function renderStatCheckLine(check) {
     const operator = check.operator === "max" ? "<=" : ">=";
+    const notes = check.notes?.length
+      ? `<small style="display:block;margin-left:40px;color:#d4b05f;white-space:nowrap;">${escapeHtml(check.notes.join(" / "))}</small>`
+      : "";
 
     return [
       "<div>",
+      '<div style="display:flex;align-items:center;gap:6px;">',
       renderBadge(check),
-      `${escapeHtml(check.propertyName)}: ${escapeHtml(check.actual ?? "-")} `,
-      `${escapeHtml(operator)} ${escapeHtml(check.target)} `,
-      `<small style="color:#aab4c3;">(${escapeHtml(check.label)})</small>`,
+      renderInlineIcon(getPropertyIconUrl(check.propertyName)),
+      `<span style="white-space:nowrap;">${escapeHtml(check.propertyName)}: ${escapeHtml(check.actual ?? "-")}</span>`,
+      "</div>",
+      `<small style="display:block;margin-left:40px;color:#aab4c3;white-space:nowrap;">${escapeHtml(operator)} ${escapeHtml(check.target)} (${escapeHtml(check.label)})</small>`,
+      notes,
       "</div>",
     ].join("");
   }
@@ -1071,6 +1370,65 @@
     return `${renderBadge(comparison)}${escapeHtml(fallbackText || "-")}`;
   }
 
+  function renderStatIcon(style = STAT_ICON_STYLE) {
+    return STAT_ICON_URL
+      ? `<img src="${escapeHtml(STAT_ICON_URL)}" alt="" style="${style}">`
+      : "";
+  }
+
+  function getSheetPageUrl() {
+    return SHEET_URL.replace(/\/export\?.*$/, "/edit?gid=0");
+  }
+
+  function formatEidolon(rank) {
+    const value = Number(rank);
+
+    if (value === 0) {
+      return "명함";
+    }
+
+    if (Number.isFinite(value)) {
+      return `${value}돌`;
+    }
+
+    return `${rank}돌`;
+  }
+
+  function getPageLanguage() {
+    return cleanCell(
+      document.documentElement?.lang ||
+        document.querySelector("html")?.getAttribute("lang") ||
+        "",
+    ).toLowerCase();
+  }
+
+  function isKoreanPageLanguage() {
+    const language = getPageLanguage();
+    return !language || language.startsWith("ko");
+  }
+
+  function isLikelyKoreanCharacterData(detailData) {
+    const avatar = detailData?.avatar_list?.find((item) => cleanCell(item?.name));
+    const propertyInfo = detailData?.property_info || {};
+    const propertyNames = Object.values(propertyInfo)
+      .map((property) => cleanCell(property?.name))
+      .filter(Boolean);
+    const sampleText = [avatar?.name, ...propertyNames.slice(0, 8)].join(" ");
+
+    return /[가-힣]/.test(sampleText);
+  }
+
+  function shouldRequireKoreanLanguage(detailData) {
+    return !isKoreanPageLanguage() || !isLikelyKoreanCharacterData(detailData);
+  }
+
+  function alertKoreanLanguageRequired() {
+    languageWarningShown = true;
+    alert(
+      "HoYoLAB 언어가 한국어가 아니면 캐릭터 이름과 스탯명이 영어로 들어와 기준표와 매칭되지 않습니다.\n\nHoYoLAB 언어를 한국어로 바꾼 뒤 페이지를 새로고침해 주세요.",
+    );
+  }
+
   function renderUnmappedSets(sets) {
     if (!sets.length) {
       return "";
@@ -1078,10 +1436,31 @@
 
     return `
       <div style="margin-bottom:8px;color:#d4b05f;">
-        Unmapped sets:
+        매핑되지 않은 세트:
         ${sets.map((set) =>
-          `${escapeHtml(set.key)} item:${escapeHtml(set.itemKey || "")}${set.wikiUrl ? ` <a style="color:#8ab4ff;" href="${escapeHtml(set.wikiUrl)}" target="_blank" rel="noreferrer">wiki</a>` : ""}`,
+          `${escapeHtml(set.key)} 항목:${escapeHtml(set.itemKey || "")}${set.wikiUrl ? ` <a style="color:#8ab4ff;" href="${escapeHtml(set.wikiUrl)}" target="_blank" rel="noreferrer">위키</a>` : ""}`,
         ).join(" · ")}
+      </div>
+    `;
+  }
+
+  function renderVariantList(row, selectedVariant) {
+    if (!row.variants.length) {
+      return "";
+    }
+
+    return `
+      <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;color:#aab4c3;font-size:11px;">
+        <strong style="color:#d7dee8;">기준 세팅</strong>
+        ${row.variants.map((variant, index) => {
+          if (!cleanCell(variant.role)) {
+            return "";
+          }
+
+          const selected = variant === selectedVariant;
+          const label = `${index + 1}. ${variant.role}`;
+          return `<button type="button" data-jalkiwotda-row-index="${escapeHtml(row.rowIndex)}" data-jalkiwotda-variant-index="${escapeHtml(index)}" style="display:inline-block;padding:2px 5px;border:1px solid ${selected ? "#8ab4ff" : "#5f6b7a"};border-radius:4px;color:${selected ? "#fff" : "#aab4c3"};background:${selected ? "#25324a" : "transparent"};white-space:nowrap;font:inherit;cursor:pointer;">${escapeHtml(label)}</button>`;
+        }).join("")}
       </div>
     `;
   }
@@ -1093,16 +1472,15 @@
 
     return `
       <tr>
-        <td>${escapeHtml(row.name)}</td>
-        <td>${escapeHtml(row.sheetName || "NO MATCH")}</td>
-        <td>Lv.${escapeHtml(row.level)} E${escapeHtml(row.rank)}</td>
+        <td>${renderInlineIcon(row.iconUrl, CHARACTER_ICON_STYLE)}${escapeHtml(row.name)}</td>
+        <td>Lv.${escapeHtml(row.level)}<br>${escapeHtml(formatEidolon(row.rank))}</td>
         <td>${escapeHtml(variant.role || "")}</td>
         <td>
-          ${renderOptionLine("광추", row.build.lightCone, checks.lightCone, variant.lightCones)}
+          ${renderOptionLine("광추", row.build.lightCone, checks.lightCone, variant.lightCones, row.build.lightConeIcon, EQUIPMENT_ICON_STYLE)}
         </td>
         <td>
-          ${renderOptionLine("유물", formatSetGroups(row.build.relicSets), checks.relicSets, variant.relicSets)}
-          ${renderOptionLine("장신구", formatSetGroups(row.build.ornamentSets), checks.ornamentSets, variant.ornamentSets)}
+          ${renderOptionHtmlLine("유물", formatSetGroupsHtml(row.build.relicSets), checks.relicSets, variant.relicSets)}
+          ${renderOptionHtmlLine("장신구", formatSetGroupsHtml(row.build.ornamentSets), checks.ornamentSets, variant.ornamentSets)}
         </td>
         <td>
           ${renderOptionLine("몸통", row.build.mainStats.body, checks.body, variant.mainStats?.body)}
@@ -1112,8 +1490,11 @@
         </td>
         <td>${renderStatBlock(row.statComparison, variant.statTarget)}</td>
         <td>${renderStatBlock(row.critComparison, variant.critTarget)}</td>
-        <td>${escapeHtml(getDisplayStats(row.properties))}</td>
+        <td>${renderDisplayStats(row.properties)}</td>
       </tr>
+      ${row.variants.length
+        ? `<tr data-jalkiwotda-settings-row><td colspan="9">${renderVariantList(row, variant)}</td></tr>`
+        : ""}
     `;
   }
 
@@ -1122,30 +1503,35 @@
     const totals = getReportTotals(rows);
 
     return `
-      <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px;">
-        <strong>Jalkiwotda HSR Report</strong>
-        <button type="button" data-jalkiwotda-close-report>Close</button>
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:10px;">
+        <div>
+          <strong style="display:flex;align-items:center;font-size:20px;line-height:1.25;">${renderStatIcon(REPORT_ICON_STYLE)}이잘키 스타레일 정오표</strong>
+          <div style="margin-top:6px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+            <a href="${escapeHtml(getSheetPageUrl())}" target="_blank" rel="noreferrer" style="color:#8ab4ff;font-weight:700;">이잘키 표 열기</a>
+            <span style="color:#ffcf70;font-weight:700;">세팅하기 전에 반드시 표를 다시 확인할것.</span>
+          </div>
+        </div>
+        <button type="button" data-jalkiwotda-close-report>닫기</button>
       </div>
       <div style="margin-bottom:8px;">
-        Matched ${rows.filter((row) => row.matched).length}/${rows.length}
-        · OK ${totals.ok}
-        · NG ${totals.bad}
+        매칭 ${rows.filter((row) => row.matched).length}/${rows.length}
+        · 적합 ${totals.ok}
+        · 확인 ${totals.bad}
         · ? ${totals.unknown}
       </div>
       ${renderUnmappedSets(unmappedSets)}
       <table>
         <thead>
           <tr>
-            <th>Character</th>
-            <th>Sheet</th>
-            <th>Level</th>
-            <th>Role</th>
-            <th>Light Cone</th>
-            <th>Sets</th>
-            <th>Main Options</th>
-            <th>Stat Target</th>
-            <th>Crit Target</th>
-            <th>Current Stats</th>
+            <th>캐릭터</th>
+            <th>레벨</th>
+            <th>역할</th>
+            <th>광추</th>
+            <th>세트</th>
+            <th>주 옵션</th>
+            <th>스탯 목표</th>
+            <th>치명타 목표</th>
+            <th>현재 스탯</th>
           </tr>
         </thead>
         <tbody>${rows.map(renderReportRow).join("")}</tbody>
@@ -1153,11 +1539,38 @@
     `;
   }
 
+  function renderReportModal(modal, rows) {
+    modal.innerHTML = createReportHtml(rows);
+    styleReportTable(modal);
+    modal.querySelector("[data-jalkiwotda-close-report]").addEventListener("click", () => {
+      modal.remove();
+    });
+    modal.querySelectorAll("[data-jalkiwotda-variant-index]").forEach((button) => {
+      button.addEventListener("click", () => {
+        const rowIndex = Number(button.dataset.jalkiwotdaRowIndex);
+        const variantIndex = Number(button.dataset.jalkiwotdaVariantIndex);
+        const row = rows[rowIndex];
+
+        if (!row || !Number.isInteger(variantIndex)) {
+          return;
+        }
+
+        applySelectedVariant(row, variantIndex);
+        renderReportModal(modal, rows);
+      });
+    });
+  }
+
   async function showReport() {
     const detailData = getLatestDetailData();
 
     if (!detailData) {
-      alert("No /hkrpg/api/avatar/info response captured yet. Refresh the HoYoLAB page first.");
+      alert("아직 캐릭터 정보를 가져오지 못했습니다. HoYoLAB 페이지를 새로고침한 뒤 다시 시도하세요.");
+      return;
+    }
+
+    if (shouldRequireKoreanLanguage(detailData)) {
+      alertKoreanLanguageRequired();
       return;
     }
 
@@ -1173,11 +1586,7 @@
     const rows = buildReportRows(detailData, sheetCharacters, wikiSetNames);
     const modal = getOrCreateReportModal();
 
-    modal.innerHTML = createReportHtml(rows);
-    styleReportTable(modal);
-    modal.querySelector("[data-jalkiwotda-close-report]").addEventListener("click", () => {
-      modal.remove();
-    });
+    renderReportModal(modal, rows);
   }
 
   function getOrCreateReportModal() {
@@ -1197,6 +1606,34 @@
     modal.querySelector("table").style.cssText = TABLE_STYLE;
     modal.querySelectorAll("th,td").forEach((cell) => {
       cell.style.cssText = TABLE_CELL_STYLE;
+    });
+    modal.querySelectorAll("[data-jalkiwotda-settings-row] td").forEach((cell) => {
+      cell.style.background = "#151b26";
+      cell.style.padding = "5px 6px 8px";
+    });
+    modal.querySelectorAll("th:nth-child(3),td:nth-child(3)").forEach((cell) => {
+      cell.style.minWidth = "90px";
+    });
+    modal.querySelectorAll("th:nth-child(4),td:nth-child(4)").forEach((cell) => {
+      cell.style.width = "240px";
+      cell.style.minWidth = "240px";
+      cell.style.maxWidth = "240px";
+      cell.style.whiteSpace = "normal";
+      cell.style.wordBreak = "keep-all";
+    });
+    modal.querySelectorAll("th:nth-child(5),td:nth-child(5)").forEach((cell) => {
+      cell.style.minWidth = "220px";
+      cell.style.whiteSpace = "normal";
+      cell.style.wordBreak = "keep-all";
+    });
+    modal.querySelectorAll("th:nth-child(7),td:nth-child(7)").forEach((cell) => {
+      cell.style.minWidth = "180px";
+    });
+    modal.querySelectorAll("th:nth-child(8),td:nth-child(8)").forEach((cell) => {
+      cell.style.minWidth = "180px";
+    });
+    modal.querySelectorAll("th:nth-child(9),td:nth-child(9)").forEach((cell) => {
+      cell.style.minWidth = "150px";
     });
   }
 
@@ -1283,13 +1720,26 @@
     panel.style.cssText = PANEL_STYLE;
 
     panel.innerHTML = [
-      '<span>HSR API: <b data-jalkiwotda-hsr-count>0</b></span>',
-      '<button type="button" data-jalkiwotda-hsr-action="report">Report</button>',
-      '<button type="button" data-jalkiwotda-hsr-action="copy">Copy</button>',
-      '<button type="button" data-jalkiwotda-hsr-action="download">Download</button>',
-      '<button type="button" data-jalkiwotda-hsr-action="clear">Clear</button>',
+      REPORT_IMAGE_URL
+        ? `<img src="${escapeHtml(REPORT_IMAGE_URL)}" alt="이잘키 스타레일 정오표" data-jalkiwotda-hsr-image>`
+        : "",
+      '<span data-jalkiwotda-hsr-count-row>불러온 정보: <b data-jalkiwotda-hsr-count>0</b></span>',
+      '<button type="button" data-jalkiwotda-hsr-action="report">정오표 보기</button>',
+      '<div data-jalkiwotda-hsr-button-row>',
+      '<button type="button" data-jalkiwotda-hsr-action="refresh">새로고침</button>',
+      "</div>",
     ].join("");
 
+    const panelImage = panel.querySelector("[data-jalkiwotda-hsr-image]");
+    const countRow = panel.querySelector("[data-jalkiwotda-hsr-count-row]");
+    const buttonRow = panel.querySelector("[data-jalkiwotda-hsr-button-row]");
+
+    if (panelImage) {
+      panelImage.style.cssText = PANEL_IMAGE_STYLE;
+    }
+
+    countRow.style.cssText = PANEL_COUNT_STYLE;
+    buttonRow.style.cssText = PANEL_BUTTON_ROW_STYLE;
     panel.querySelectorAll("button").forEach((button) => {
       button.style.cssText = PANEL_BUTTON_STYLE;
     });
@@ -1297,12 +1747,9 @@
     panel.addEventListener("click", async (event) => {
       const action = event.target?.dataset?.jalkiwotdaHsrAction;
 
-      if (action === "copy") {
-        await copyResponses();
-      } else if (action === "download") {
-        downloadResponses();
-      } else if (action === "clear") {
+      if (action === "refresh") {
         clearResponses();
+        window.location.reload();
       } else if (action === "report") {
         await showReport();
       }

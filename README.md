@@ -1,108 +1,140 @@
 # jalkiwotda-hsr
 
-Browser extension for generating character build reports from HoYoLAB pages.
+HoYoLAB의 Honkai: Star Rail 캐릭터 페이지에서 캐릭터 정보를 읽어, 커뮤니티 기준표인 “이정도면 잘키웠다”와 비교 리포트를 만들어 주는 브라우저 확장 프로그램입니다.
 
-> Generate community benchmark reports for your Honkai: Star Rail characters directly from HoYoLAB.
+이 프로젝트는 HoYoverse 공식 프로젝트가 아니며, 팬 메이드 도구입니다.
 
----
+## 주요 기능
 
-## What is this?
+- HoYoLAB 스타레일 전적 페이지에서 캐릭터 데이터 캡처
+- 여러 캐릭터를 한 번에 분석
+- “이정도면 잘키웠다” 구글 스프레드시트 기준과 비교
+- 광추, 유물/장신구 세트, 주 옵션, 주요 스탯 목표 표시
+- 브라우저 안에서 HTML 리포트 생성
+- 별도 서버 없이 로컬 브라우저에서 동작
 
-This project is a browser extension that analyzes character information from HoYoLAB and generates an HTML report based on community build benchmarks.
+## 설치 방법
 
-The benchmark data originates from the Korean community spreadsheet project commonly known as:
+현재는 Chrome Web Store에 배포된 확장 프로그램이 아니라, 개발자 모드로 직접 불러와서 사용합니다.
 
-> “이정도면 잘키웠다”
+### Chrome 또는 Edge에서 설치
 
-A community-maintained reference that defines practical character build expectations for subculture games such as Honkai: Star Rail.
+1. 이 저장소를 내려받거나 압축을 풉니다.
+2. 브라우저에서 확장 프로그램 관리 페이지를 엽니다.
+   - Chrome: `chrome://extensions`
+   - Edge: `edge://extensions`
+3. 오른쪽 위의 `개발자 모드`를 켭니다.
+4. `압축해제된 확장 프로그램을 로드`를 누릅니다.
+5. 이 저장소의 루트 폴더를 선택합니다.
+   - `manifest.json` 파일이 보이는 폴더를 선택해야 합니다.
+6. 확장 프로그램 목록에 `jalkiwotda-hsr`가 표시되면 설치가 끝난 것입니다.
 
-Examples include:
+이미 패키징된 ZIP을 사용하려면 `dist/jalkiwotda-hsr-0.1.1.zip` 파일을 풀고, 풀린 폴더를 같은 방식으로 로드하면 됩니다.
 
-* recommended Speed thresholds
-* Crit Rate / Crit DMG expectations
-* Break Effect targets
-* usable endgame stat ranges
-* practical build baselines
+## 사용 방법
 
----
+1. 확장 프로그램을 설치한 브라우저에서 HoYoLAB에 로그인합니다.
+2. HoYoLAB 언어를 한국어로 설정합니다.
+3. Honkai: Star Rail 전적 페이지로 이동합니다.
+   - 확장 프로그램은 아래 주소 형태의 페이지에서 동작합니다.
+   - `https://act.hoyolab.com/app/community-game-records-sea/rpg/*`
+4. 페이지를 새로고침합니다.
+5. 화면 오른쪽 아래에 작은 패널이 나타나는지 확인합니다.
+   - `불러온 정보: 0`
+   - `정오표 보기`
+   - `새로고침`
+6. HoYoLAB 페이지가 캐릭터 정보를 불러오면 `불러온 정보` 숫자가 올라갑니다.
+7. `정오표 보기` 버튼을 누르면 분석 리포트가 화면에 뜹니다.
 
-## Background
+리포트가 뜨지 않고 “아직 캐릭터 정보를 가져오지 못했습니다” 메시지가 나오면, HoYoLAB 페이지를 한 번 새로고침한 뒤 캐릭터 정보가 완전히 로드될 때까지 기다렸다가 다시 `정오표 보기`를 누르세요.
 
-As the game continued to grow, the number of playable characters increased significantly.
+HoYoLAB 언어가 영어 등 다른 언어로 설정되어 있으면 캐릭터 이름과 스탯명이 영어로 들어와 기준표와 매칭되지 않습니다. 이 경우 확장 프로그램이 한국어로 변경하라는 안내를 띄웁니다.
 
-Checking every character manually became increasingly difficult.
+## 패널 버튼 설명
 
-The official in-game showcase API also has several limitations:
+- `정오표 보기`: 현재 캡처된 HoYoLAB 캐릭터 정보를 기준표와 비교해 리포트를 엽니다.
+- `새로고침`: 현재 캡처 데이터를 비우고 HoYoLAB 페이지를 새로고침합니다.
 
-* only publicly visible profiles can be checked
-* only showcased characters are accessible
-* usually limited to around 6 characters
-* difficult to review an entire account at once
+## 리포트에서 보는 항목
 
-However, HoYoLAB provides much more detailed character information through its website.
+- `캐릭터`: HoYoLAB에서 읽은 캐릭터 이름
+- `레벨`: 캐릭터 레벨과 성혼
+- `역할`: 기준표의 역할 구분
+- `광추`: 장착 광추와 추천 광추 비교
+- `세트`: 유물/장신구 세트 비교
+- `주 옵션`: 몸통, 신발, 구체, 매듭 주 옵션 비교
+- `스탯 목표`: 기준표의 주요 스탯 목표와 현재 스탯 비교
+- `치명타 목표`: 치명타 관련 목표와 현재 스탯 비교
+- `현재 스탯`: 현재 캐릭터의 표시 스탯 요약
 
-The problem is that directly using private APIs would require:
+표시 상태는 대략 다음 의미입니다.
 
-* authenticated login handling
-* session management
-* maintenance against API changes
-* privacy/security concerns
+- `적합`: 기준에 맞거나 허용 범위로 판단됨
+- `확인`: 기준과 맞지 않는 것으로 판단됨
+- `?`: 데이터가 없거나 자동 판단이 어려움
 
----
+## 데이터와 권한
 
-## Solution
+이 확장 프로그램은 다음 데이터를 사용합니다.
 
-Instead of relying on private APIs, this project uses a simpler approach:
+- HoYoLAB 페이지가 브라우저에서 불러온 스타레일 캐릭터 응답
+- 공개 구글 스프레드시트 CSV 기준표
+- HoYoWiki의 유물/장신구 세트 이름 정보
 
-1. Open your HoYoLAB character page
-2. The extension reads character data directly from the page HTML
-3. The extension loads the public benchmark sheet as CSV
-4. The data is analyzed locally
-5. An HTML report is generated automatically
+확장 프로그램은 로그인 토큰이나 비밀번호를 수집하도록 만들어져 있지 않습니다. 별도 서버로 데이터를 보내지 않고, 분석은 사용자의 브라우저 안에서 처리됩니다.
 
-This approach allows:
+브라우저 권한은 기준표를 가져오기 위해 `docs.google.com` 및 Google user content 도메인 접근 권한을 포함합니다.
 
-* no credential collection
-* no external server requirement
-* full-account analysis
-* local-only processing
-* easier maintenance compared to reverse-engineered APIs
+## 문제 해결
 
----
+### 오른쪽 아래 패널이 보이지 않음
 
-## Features
+- HoYoLAB 스타레일 전적 페이지가 맞는지 확인하세요.
+- 확장 프로그램을 설치한 뒤 HoYoLAB 페이지를 새로고침하세요.
+- `chrome://extensions` 또는 `edge://extensions`에서 확장 프로그램이 켜져 있는지 확인하세요.
 
-* HoYoLAB character page parsing
-* Multi-character analysis
-* Community benchmark comparison
-* HTML report generation
-* Local-only processing
-* No login/token storage
-* Lightweight browser extension workflow
+### `불러온 정보` 숫자가 계속 0임
 
----
+- HoYoLAB에 로그인되어 있는지 확인하세요.
+- 캐릭터 정보가 화면에 완전히 로드될 때까지 기다리세요.
+- 페이지를 새로고침한 뒤 다시 확인하세요.
 
-## Planned Features
+### 리포트가 기준표와 잘 매칭되지 않음
 
-* Better visualized reports
-* Historical build snapshots
-* Character filtering/search
-* Import/export support
-* Versioned benchmark datasets
-* Multi-language support
+- 캐릭터 이름, 개척자 운명의 길, March 7th 운명의 길처럼 이름 변형이 있는 캐릭터는 자동 매칭이 제한될 수 있습니다.
+- 기준표의 표기나 HoYoLAB 데이터 구조가 바뀌면 일부 항목이 `매칭 없음` 또는 `?`로 표시될 수 있습니다.
 
----
+### 유물/장신구 세트가 `매핑되지 않은 세트`로 표시됨
 
-## Disclaimer
+- HoYoWiki 또는 내부 매핑에 아직 반영되지 않은 신규 세트일 수 있습니다.
+- 게임 업데이트 직후에는 세트 이름 매칭이 일시적으로 실패할 수 있습니다.
 
-This is an unofficial fan-made project.
+## 개발자용 스크립트
 
-All benchmark data is community-driven and may change depending on game balance updates and meta shifts.
+로컬 JSON 또는 CSV를 직접 파싱해 확인할 때 사용할 수 있는 Node.js 스크립트가 있습니다.
 
-This project is not affiliated with HoYoverse.
+```bash
+node scripts/parse-hoyolab.js path/to/hoyolab-responses.json
+```
 
----
+```bash
+node scripts/parse-sheet.js path/to/sheet.csv
+```
 
-## License
+환경 변수로 경로를 넘길 수도 있습니다.
+
+```bash
+JALKIWOTDA_HOYOLAB_JSON=path/to/hoyolab-responses.json node scripts/parse-hoyolab.js
+JALKIWOTDA_SHEET_CSV=path/to/sheet.csv node scripts/parse-sheet.js
+```
+
+## 현재 한계
+
+- HoYoLAB 페이지 구조나 API 응답 형식이 바뀌면 동작하지 않을 수 있습니다.
+- 기준표의 셀 구조가 크게 바뀌면 파싱이 실패할 수 있습니다.
+- 자동 비교는 기준표 문구와 HoYoLAB 표기를 정규화해서 맞추는 방식이라, 모든 케이스를 완벽하게 판단하지는 못합니다.
+- 현재 리포트 UI는 간단한 디버그/검증용 HTML 테이블에 가깝습니다.
+
+## 라이선스
 
 MIT License
