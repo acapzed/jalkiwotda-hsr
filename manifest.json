@@ -1,0 +1,34 @@
+{
+  "manifest_version": 3,
+  "name": "jalkiwotda-hsr",
+  "version": "0.1.0",
+  "description": "Capture HoYoLAB Honkai: Star Rail character data for local build reports.",
+  "background": {
+    "service_worker": "src/background/service-worker.js"
+  },
+  "host_permissions": [
+    "https://docs.google.com/*",
+    "https://*.googleusercontent.com/*"
+  ],
+  "content_scripts": [
+    {
+      "matches": [
+        "https://act.hoyolab.com/app/community-game-records-sea/rpg/*"
+      ],
+      "js": [
+        "src/content/inject-hoyolab-response-hook.js"
+      ],
+      "run_at": "document_start"
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "src/injected/hoyolab-response-hook.js"
+      ],
+      "matches": [
+        "https://act.hoyolab.com/*"
+      ]
+    }
+  ]
+}

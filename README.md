@@ -56,8 +56,9 @@ Instead of relying on private APIs, this project uses a simpler approach:
 
 1. Open your HoYoLAB character page
 2. The extension reads character data directly from the page HTML
-3. The data is analyzed locally
-4. An HTML report is generated automatically
+3. The extension loads the public benchmark sheet as CSV
+4. The data is analyzed locally
+5. An HTML report is generated automatically
 
 This approach allows:
 
