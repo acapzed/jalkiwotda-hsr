@@ -278,24 +278,32 @@
 
   function compareCritTarget(properties, targetText) {
     const text = cleanCell(targetText);
-    const numbers = Array.from(text.matchAll(/\d+(?:\.\d+)?/g)).map((match) => Number(match[0]));
     if (!text) return { status: "unknown", checks: [] };
 
     const critRate = getNumericProperty(properties, "치명타 확률");
     const critDamage = getNumericProperty(properties, "치명타 피해");
-    let checks = [];
+    const checks = [];
+    const lines = text.split(/\n+/).map((line) => line.trim()).filter(Boolean);
 
-    if (numbers.length >= 2) {
-      checks = [
-        { label: `치확 ${numbers[0]}`, propertyName: "치명타 확률", actual: critRate, target: numbers[0], operator: "min", status: compareStatValue(critRate, numbers[0], "min") },
-        { label: `치피 ${numbers[1]}`, propertyName: "치명타 피해", actual: critDamage, target: numbers[1], operator: "min", status: compareStatValue(critDamage, numbers[1], "min") },
-      ];
-    } else {
-      const propertyName = resolveTargetProperty(text);
+    for (const line of lines) {
+      const numbers = Array.from(line.matchAll(/\d+(?:\.\d+)?/g)).map((match) => Number(match[0]));
+      if (numbers.length >= 2 && !resolveTargetProperty(line)) {
+        checks.push(
+          { label: `치확 ${numbers[0]}`, propertyName: "치명타 확률", actual: critRate, target: numbers[0], operator: "min", status: compareStatValue(critRate, numbers[0], "min") },
+          { label: `치피 ${numbers[1]}`, propertyName: "치명타 피해", actual: critDamage, target: numbers[1], operator: "min", status: compareStatValue(critDamage, numbers[1], "min") },
+        );
+        continue;
+      }
+
+      const propertyName = resolveTargetProperty(line);
       const target = numbers[0] ?? null;
       const actual = propertyName === "치명타 확률" ? critRate : propertyName === "치명타 피해" ? critDamage : null;
       if (propertyName && target !== null) {
-        checks = [{ label: text, propertyName, actual, target, operator: "min", status: compareStatValue(actual, target, "min") }];
+        const operator = resolveTargetOperator(line);
+        checks.push({ label: line, propertyName, actual, target, operator, status: compareStatValue(actual, target, operator) });
+      } else if (checks.length > 0) {
+        const previous = checks[checks.length - 1];
+        previous.notes = [...(previous.notes || []), line];
       }
     }
 
@@ -329,7 +337,7 @@
         ]),
       );
       const build = getBuildData(character, propertyInfo, relicWiki, wikiSetNames);
-      const variants = (sheet?.variants || []).filter((variant) => cleanCell(variant.role));
+      const variants = sheet?.variants || [];
       const comparisons = variants.map((variant) => compareVariant(build, variant));
       const comparison = pickBestComparison(build, variants);
       const selectedVariantIndex = Math.max(0, comparisons.findIndex((candidate) => candidate?.variant === comparison?.variant));

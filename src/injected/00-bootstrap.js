@@ -103,6 +103,7 @@
       sheetCharactersCache: null,
       wikiEquipmentSetsCache: null,
       languageWarningShown: false,
+      simpleMode: window.localStorage?.getItem("jalkiwotda-hsr-simple-mode") === "1",
       originals: {},
     },
     styles: {},

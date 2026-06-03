@@ -3,12 +3,38 @@
   if (!app) return;
 
   Object.assign(app.styles, {
-    table: "width:max-content;min-width:100%;border-collapse:collapse;",
+    table: "width:100%;table-layout:fixed;border-collapse:collapse;",
     tableCell: "border-bottom:1px solid #2b3442;padding:6px;text-align:left;vertical-align:top;",
     modal: [
-      "position:fixed", "inset:40px", "z-index:2147483646", "overflow:auto", "padding:16px",
-      "border:1px solid #5f6b7a", "border-radius:8px", "background:#10141d", "color:#fff",
-      "font:12px/1.45 sans-serif", "box-shadow:0 8px 30px rgba(0,0,0,.55)",
+      "position:fixed", "inset:0", "z-index:2147483647", "overflow:hidden",
+      "background:#10141d", "color:#fff", "font:12px/1.45 sans-serif",
+    ].join(";"),
+    modalHeader: [
+      "position:fixed", "top:0", "left:0", "right:0", "height:86px", "z-index:2",
+      "display:flex", "align-items:flex-start", "justify-content:space-between", "gap:12px",
+      "box-sizing:border-box", "padding:14px 92px 10px 16px", "border-bottom:1px solid #2b3442",
+      "background:#10141d",
+    ].join(";"),
+    modalBody: [
+      "position:absolute", "top:86px", "left:0", "right:0", "bottom:0", "overflow-x:hidden", "overflow-y:auto",
+      "box-sizing:border-box", "padding:10px 12px 12px",
+    ].join(";"),
+    closeButton: [
+      "position:fixed", "top:8px", "right:8px", "z-index:3", "border:1px solid #8892a0",
+      "border-radius:4px", "background:#242b36", "color:#fff", "padding:4px 8px",
+      "font:12px/1 sans-serif", "cursor:pointer",
+    ].join(";"),
+    simpleModeToggle: [
+      "display:inline-flex", "align-items:center", "gap:0", "overflow:hidden", "flex:none",
+      "border:1px solid #5f6b7a", "border-radius:6px", "background:#151b26",
+      "color:#aab4c3", "font:12px/1 sans-serif", "cursor:pointer", "user-select:none",
+    ].join(";"),
+    simpleModeToggleText: [
+      "display:inline-block", "padding:6px 8px", "font-weight:700",
+    ].join(";"),
+    simpleModeToggleState: [
+      "display:inline-block", "min-width:34px", "padding:6px 8px", "text-align:center",
+      "border-left:1px solid #5f6b7a", "background:#242b36", "color:#fff", "font-weight:700",
     ].join(";"),
     panel: [
       "position:fixed", "right:12px", "bottom:12px", "z-index:2147483647", "display:flex",

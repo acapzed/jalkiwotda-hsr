@@ -24,6 +24,7 @@
   }
 
   function renderInlineIcon(url, style = app.styles.inlineStatIcon) {
+    if (app.state.simpleMode) return "";
     return url ? `<img src="${escapeHtml(url)}" alt="" style="${style}">` : "";
   }
 
@@ -138,6 +139,7 @@
   }
 
   function renderStatIcon(style = app.styles.statIcon) {
+    if (app.state.simpleMode) return "";
     return app.config.statIconUrl ? `<img src="${escapeHtml(app.config.statIconUrl)}" alt="" style="${style}">` : "";
   }
 
@@ -156,6 +158,11 @@
     return groups.length
       ? groups.map((group) => `${renderInlineIcon(group.iconUrl, app.styles.itemIcon)}${escapeHtml(group.label)} x${escapeHtml(group.count)}`).join("<br>")
       : "-";
+  }
+
+  function getVariantLabel(variant, index) {
+    const label = cleanCell(variant.role);
+    return label ? `${index + 1}. ${label.replace(/\n+/g, " / ")}` : "";
   }
 
   function renderUnmappedSets(sets) {
@@ -178,7 +185,7 @@
         ${row.variants.map((variant, index) => {
           if (!cleanCell(variant.role)) return "";
           const selected = variant === selectedVariant;
-          const label = `${index + 1}. ${variant.role}`;
+          const label = getVariantLabel(variant, index);
           return `<button type="button" data-jalkiwotda-row-index="${escapeHtml(row.rowIndex)}" data-jalkiwotda-variant-index="${escapeHtml(index)}" style="display:inline-block;padding:2px 5px;border:1px solid ${selected ? "#8ab4ff" : "#5f6b7a"};border-radius:4px;color:${selected ? "#fff" : "#aab4c3"};background:${selected ? "#25324a" : "transparent"};white-space:nowrap;font:inherit;cursor:pointer;">${escapeHtml(label)}</button>`;
         }).join("")}
       </div>
@@ -189,12 +196,14 @@
     const selectedComparison = row.comparison || {};
     const variant = selectedComparison.variant || row.variants[0] || {};
     const checks = selectedComparison.checks || {};
+    const columnCount = app.state.simpleMode ? 8 : 9;
 
     return `
+      ${row.variants.length ? `<tr data-jalkiwotda-settings-row><td colspan="${columnCount}">${renderVariantList(row, variant)}</td></tr>` : ""}
       <tr>
         <td>${renderInlineIcon(row.iconUrl, app.styles.characterIcon)}${escapeHtml(row.name)}</td>
         <td>Lv.${escapeHtml(row.level)}<br>${escapeHtml(formatEidolon(row.rank))}</td>
-        <td>${escapeHtml(variant.role || "")}</td>
+        <td>${escapeHtml(cleanCell(variant.role))}</td>
         <td>${renderOptionLine("광추", row.build.lightCone, checks.lightCone, variant.lightCones, row.build.lightConeIcon, app.styles.equipmentIcon)}</td>
         <td>
           ${renderOptionHtmlLine("유물", formatSetGroupsHtml(row.build.relicSets), checks.relicSets, variant.relicSets)}
@@ -208,9 +217,8 @@
         </td>
         <td>${renderStatBlock(row.statComparison, variant.statTarget)}</td>
         <td>${renderStatBlock(row.critComparison, variant.critTarget)}</td>
-        <td>${renderDisplayStats(row.properties)}</td>
+        ${app.state.simpleMode ? "" : `<td>${renderDisplayStats(row.properties)}</td>`}
       </tr>
-      ${row.variants.length ? `<tr data-jalkiwotda-settings-row><td colspan="9">${renderVariantList(row, variant)}</td></tr>` : ""}
     `;
   }
 
@@ -219,31 +227,38 @@
     const totals = getReportTotals(rows);
 
     return `
-      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:10px;">
+      <button type="button" data-jalkiwotda-close-report style="${app.styles.closeButton}">닫기</button>
+      <div style="${app.styles.modalHeader}">
         <div>
           <strong style="display:flex;align-items:center;font-size:20px;line-height:1.25;">${renderStatIcon(app.styles.reportIcon)}이잘키 스타레일 정오표</strong>
           <div style="margin-top:6px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
             <a href="${escapeHtml(getSheetPageUrl())}" target="_blank" rel="noreferrer" style="color:#8ab4ff;font-weight:700;">이잘키 표 열기</a>
             <span style="color:#ffcf70;font-weight:700;">세팅하기 전에 반드시 표를 다시 확인할것.</span>
           </div>
+          <div style="margin-top:6px;">
+            매칭 ${rows.filter((row) => row.matched).length}/${rows.length}
+            · 적합 ${totals.ok}
+            · 확인 ${totals.bad}
+            · ? ${totals.unknown}
+          </div>
         </div>
-        <button type="button" data-jalkiwotda-close-report>닫기</button>
+        <label style="${app.styles.simpleModeToggle}" title="이미지와 아이콘 숨기기">
+          <input type="checkbox" data-jalkiwotda-simple-mode ${app.state.simpleMode ? "checked" : ""} style="position:absolute;opacity:0;pointer-events:none;">
+          <span style="${app.styles.simpleModeToggleText}">Simple</span>
+          <span style="${app.styles.simpleModeToggleState};background:${app.state.simpleMode ? "#25324a" : "#242b36"};color:${app.state.simpleMode ? "#8ab4ff" : "#aab4c3"};">${app.state.simpleMode ? "ON" : "OFF"}</span>
+        </label>
       </div>
-      <div style="margin-bottom:8px;">
-        매칭 ${rows.filter((row) => row.matched).length}/${rows.length}
-        · 적합 ${totals.ok}
-        · 확인 ${totals.bad}
-        · ? ${totals.unknown}
+      <div style="${app.styles.modalBody}">
+        ${renderUnmappedSets(unmappedSets)}
+        <table>
+          <thead>
+            <tr>
+              <th>캐릭터</th><th>레벨</th><th>역할</th><th>광추</th><th>세트</th><th>주 옵션</th><th>스탯 목표</th><th>치명타 목표</th>${app.state.simpleMode ? "" : "<th>현재 스탯</th>"}
+            </tr>
+          </thead>
+          <tbody>${rows.map(renderReportRow).join("")}</tbody>
+        </table>
       </div>
-      ${renderUnmappedSets(unmappedSets)}
-      <table>
-        <thead>
-          <tr>
-            <th>캐릭터</th><th>레벨</th><th>역할</th><th>광추</th><th>세트</th><th>주 옵션</th><th>스탯 목표</th><th>치명타 목표</th><th>현재 스탯</th>
-          </tr>
-        </thead>
-        <tbody>${rows.map(renderReportRow).join("")}</tbody>
-      </table>
     `;
   }
 
@@ -254,15 +269,18 @@
       cell.style.background = "#151b26";
       cell.style.padding = "5px 6px 8px";
     });
-    modal.querySelectorAll("th:nth-child(3),td:nth-child(3)").forEach((cell) => { cell.style.minWidth = "90px"; });
+    modal.querySelectorAll("th:nth-child(1),td:nth-child(1)").forEach((cell) => { cell.style.width = "10%"; });
+    modal.querySelectorAll("th:nth-child(2),td:nth-child(2)").forEach((cell) => { cell.style.width = "5%"; });
+    modal.querySelectorAll("th:nth-child(3),td:nth-child(3)").forEach((cell) => { cell.style.width = "8%"; cell.style.wordBreak = "break-word"; });
     modal.querySelectorAll("th:nth-child(4),td:nth-child(4)").forEach((cell) => {
-      cell.style.width = "240px"; cell.style.minWidth = "240px"; cell.style.maxWidth = "240px"; cell.style.whiteSpace = "normal"; cell.style.wordBreak = "keep-all";
+      cell.style.width = "13%"; cell.style.whiteSpace = "normal"; cell.style.wordBreak = "keep-all";
     });
     modal.querySelectorAll("th:nth-child(5),td:nth-child(5)").forEach((cell) => {
-      cell.style.minWidth = "220px"; cell.style.whiteSpace = "normal"; cell.style.wordBreak = "keep-all";
+      cell.style.width = "14%"; cell.style.whiteSpace = "normal"; cell.style.wordBreak = "keep-all";
     });
-    modal.querySelectorAll("th:nth-child(7),td:nth-child(7),th:nth-child(8),td:nth-child(8)").forEach((cell) => { cell.style.minWidth = "180px"; });
-    modal.querySelectorAll("th:nth-child(9),td:nth-child(9)").forEach((cell) => { cell.style.minWidth = "150px"; });
+    modal.querySelectorAll("th:nth-child(6),td:nth-child(6)").forEach((cell) => { cell.style.width = "13%"; });
+    modal.querySelectorAll("th:nth-child(7),td:nth-child(7),th:nth-child(8),td:nth-child(8)").forEach((cell) => { cell.style.width = "13%"; });
+    modal.querySelectorAll("th:nth-child(9),td:nth-child(9)").forEach((cell) => { cell.style.width = "11%"; });
   }
 
   function getOrCreateReportModal() {
@@ -283,6 +301,14 @@
     modal.onclick = (event) => {
       const close = event.target.closest("[data-jalkiwotda-close-report]");
       if (close) { modal.remove(); return; }
+
+      const simpleMode = event.target.closest("[data-jalkiwotda-simple-mode]");
+      if (simpleMode) {
+        app.state.simpleMode = Boolean(simpleMode.checked);
+        window.localStorage?.setItem("jalkiwotda-hsr-simple-mode", app.state.simpleMode ? "1" : "0");
+        renderReportModal(modal, rows);
+        return;
+      }
 
       const button = event.target.closest("[data-jalkiwotda-variant-index]");
       if (!button) return;

@@ -1,4 +1,13 @@
 (() => {
+  function isHsrRecordPage() {
+    return window.location.pathname === "/app/community-game-records-sea/index.html" &&
+      window.location.hash.startsWith("#/hsr");
+  }
+
+  if (!isHsrRecordPage()) {
+    return;
+  }
+
   const SHEET_CSV_URL =
     "https://docs.google.com/spreadsheets/d/1kRQjQrHsgIDqPdnyDCVXG59Ge8AaKm0dyJvj6Vp2AY4/export?format=csv&gid=0";
 
